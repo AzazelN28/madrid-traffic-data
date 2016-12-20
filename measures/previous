@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# This file downloads previous data from Madrid's traffic data.
+# Este programa descarga todos los archivos.
 # @see http://datos.madrid.es/portal/site/egob/menuitem.c05c1f754a33a9fbe4b2e4b284f1a5a0/?vgnextoid=33cb30c367e78410VgnVCM1000000b205a0aRCRD&vgnextchannel=374512b9ace9f310VgnVCM100000171f5a0aRCRD&vgnextfmt=default
 #
 
@@ -41,7 +41,7 @@ function epilogue {
 }
 
 #
-# Descarga un archivo usando WGET
+# Descarga un archivo usando WGET.
 #
 function download_file {
   if [[ ! -d downloads ]]; then
@@ -50,15 +50,18 @@ function download_file {
 
   case $CHOOSE_EACH in
     S|s)
-      echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$2${C_RESET} de ${C_CYAN}$3${C_RESET}? (S/n)"
-      read -s -n 1 DOWNLOAD
-      case $DOWNLOAD in
-        S|s)
-          wget --progress=bar --show-progress -q -P downloads $1
-        ;;
-        *)
-        ;;
-      esac
+      DOWNLOAD=1
+      while [[ $DOWNLOAD =~ [^SsNn] ]]; do
+        echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$2${C_RESET} de ${C_CYAN}$3${C_RESET}? (S/n)"
+        read -s -n 1 DOWNLOAD
+        case $DOWNLOAD in
+          S|s)
+            wget --progress=bar --show-progress -q -P downloads $1
+          ;;
+          *)
+          ;;
+        esac
+      done
     ;;
     *)
       wget --progress=bar --show-progress -q -P downloads $1
@@ -66,6 +69,9 @@ function download_file {
   esac
 }
 
+#
+# Descarga todos los archivos de 2013.
+#
 function download_thirteen {
   # 2013 Julio
   download_file http://datos.madrid.es/egob/catalogo/208627-0-transporte-ptomedida-historico.zip "Julio" "2013"
@@ -81,6 +87,9 @@ function download_thirteen {
   download_file http://datos.madrid.es/egob/catalogo/208627-5-transporte-ptomedida-historico.zip "Diciembre" "2013"
 }
 
+#
+# Descarga todos los archivos de 2014.
+#
 function download_fourteen {
   # 2014 Enero
   download_file http://datos.madrid.es/egob/catalogo/208627-6-transporte-ptomedida-historico.zip "Enero" "2014"
@@ -108,6 +117,9 @@ function download_fourteen {
   download_file http://datos.madrid.es/egob/catalogo/208627-17-transporte-ptomedida-historico.zip "Diciembre" "2014"
 }
 
+#
+# Descarga todos los archivos de 2015.
+#
 function download_fifteen {
   # 2015 Enero
   download_file http://datos.madrid.es/egob/catalogo/208627-17-transporte-ptomedida-historico.zip "Enero" "2015"
@@ -135,6 +147,9 @@ function download_fifteen {
   download_file http://datos.madrid.es/egob/catalogo/208627-31-transporte-ptomedida-historico.zip "Diciembre" "2015"
 }
 
+#
+# Descarga todos los archivos de 2016.
+#
 function download_sixteen {
   # 2016 Enero
   download_file http://datos.madrid.es/egob/catalogo/208627-32-transporte-ptomedida-historico.zip "Enero" "2016"
@@ -162,16 +177,25 @@ function download_sixteen {
   download_file http://datos.madrid.es/egob/catalogo/208627-43-transporte-ptomedida-historico.zip "Diciembre" "2016"
 }
 
+#
+# Descarga el archivo completo de 2013.
+#
 function download_whole_thirteen {
   # 2013
   download_file http://datos.madrid.es/egob/catalogo/208627-19-transporte-ptomedida-historico.zip
 }
 
+#
+# Descarga el archivo completo de 2014.
+#
 function download_whole_fourteen {
   # 2014
   download_file http://datos.madrid.es/egob/catalogo/208627-20-transporte-ptomedida-historico.zip
 }
 
+#
+# Descarga el archivo de un año concreto.
+#
 function download_year {
   echo -e "${C_ANSWER}Descargando ${C_CYAN}$1${C_RESET}"
   case $1 in
@@ -182,27 +206,35 @@ function download_year {
   esac
 }
 
+#
+# Descarga una lista.
+#
 function download {
-  echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$1${C_RESET}? (S/n)"
-  read -s -n 1 DOWNLOAD
-  case $DOWNLOAD in
-    S|s)
-      download_year $1
-    ;;
-  esac
+  DOWNLOAD=1
+  while [[ $DOWNLOAD =~ [^SsNn] ]]; do
+    echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$1${C_RESET}? (S/n)"
+    read -s -n 1 DOWNLOAD
+    case $DOWNLOAD in
+      S|s)
+        download_year $1
+      ;;
+    esac
+  done
 }
 
+#
+# Pregunta si los meses deben preguntarse de forma individual.
+#
 function months {
-  echo -e "${C_ANSWER}¿Quieres seleccionar cada mes de forma individual? (S/n)"
-  read -s -n 1 CHOOSE_EACH
+  CHOOSE_EACH=1
+  while [[ $CHOOSE_EACH =~ [^SsNn] ]]; do
+    echo -e "${C_ANSWER}¿Quieres seleccionar cada mes de forma individual? (S/n)"
+    read -s -n 1 CHOOSE_EACH
+  done
 }
-
-CHOOSE_EACH=1
 
 title
-while [[ $CHOOSE_EACH =~ [^SsNn] ]]; do
-  months
-done
+months
 download "2013"
 download "2014"
 download "2015"
