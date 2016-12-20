@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# This file loads Madrid's current traffic data.
+#
+curl http://informo.munimadrid.es/informo/tmadrid/pm.xml 
