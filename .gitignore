@@ -206,3 +206,5 @@ jspm_packages
 
 # End of https://www.gitignore.io/api/linux,osx,windows,vim,emacs,sublimetext,node
 measures/downloads
+cameras/images
+cameras/cameras.xml

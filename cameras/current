@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+#
+#
+
+# Creamos las carpetas de imágenes.
+if [[ ! -d images ]]; then
+  mkdir -p images
+fi
+
+# Descargamos el XMLs con las cámaras.
+wget -O cameras.xml http://datos.madrid.es/egob/catalogo/212166-7899870-trafico-calle30-camaras.xml
+
+# Obtenemos las URLs de las cámaras.
+xml sel -t -v "Camaras/Camara/URL" cameras.xml | \
+  while read LINE; do
+    wget --progress=bar --show-progress -q -P images $LINE
+  done

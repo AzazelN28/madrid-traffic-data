@@ -1,5 +1,6 @@
 #!/bin/bash
 #
-# This file loads Madrid's current traffic data.
+# Descarga los datos actuales del tráfico de madrid.
+# El archivo se actualiza cada 30~40 minutos.
 #
-curl http://informo.munimadrid.es/informo/tmadrid/pm.xml 
+curl http://informo.munimadrid.es/informo/tmadrid/pm.xml
