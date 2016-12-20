@@ -23,14 +23,14 @@ C_TITLE="\x1B[48;5;26;1;37m"
 C_TITLE_POS="\x1B[3;4H"
 C_ERASE="\x1B[2J\x1B[0;0H"
 C_ERASE_LINE="\x1B[2K"
-C_ANSWER="\x1B[8;4H\x1B[2K"
+C_ANSWER="\x1B[8;4H\x1B[J"
 C_RESET="\x1B[0m"
 
 #
 # Muestra el título
 #
 function title {
-  echo -e "${C_ERASE}${C_TITLE}${C_ERASE_LINE}\n${C_ERASE_LINE}\n${C_ERASE_LINE}${C_TITLE_POS}Madrid - Programa de descarga del histórico datos de tráfico\n${C_ERASE_LINE}\n${C_ERASE_LINE}\n${C_RESET}"
+  echo -e "${C_ERASE}${C_TITLE}${C_ERASE_LINE}\n${C_ERASE_LINE}\n${C_ERASE_LINE}${C_TITLE_POS}Madrid - Programa de descarga del histórico de datos de tráfico\n${C_ERASE_LINE}\n${C_ERASE_LINE}\n${C_RESET}"
 }
 
 #
@@ -50,7 +50,7 @@ function download_file {
 
   case $CHOOSE_EACH in
     S|s)
-      echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$2${C_RESET} de ${C_CYAN}$3${C_RESET}?"
+      echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$2${C_RESET} de ${C_CYAN}$3${C_RESET}? (S/n)"
       read -s -n 1 DOWNLOAD
       case $DOWNLOAD in
         S|s)
