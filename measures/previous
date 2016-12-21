@@ -41,14 +41,30 @@ function epilogue {
 }
 
 #
+# Descarga los archivos via wget
+#
+# $1: URL
+# $2: Mes
+# $3: Año
+#
+function download_via_wget {
+  OUTPUT_FILENAME="downloads/${3}_${2}.zip"
+  wget --progress=bar --show-progress -q -O $OUTPUT_FILENAME $1
+}
+
+#
 # Descarga un archivo usando WGET.
+#
+# $1: URL
+# $2: Mes
+# $3: Año
 #
 function download_file {
   if [[ ! -d downloads ]]; then
     mkdir -p downloads
   fi
 
-  case $CHOOSE_EACH in
+  case $CHOOSE_MONTH in
     S|s)
       DOWNLOAD=1
       while [[ $DOWNLOAD =~ [^SsNn] ]]; do
@@ -56,7 +72,7 @@ function download_file {
         read -s -n 1 DOWNLOAD
         case $DOWNLOAD in
           S|s)
-            wget --progress=bar --show-progress -q -P downloads $1
+            download_via_wget $1 $2 $3
           ;;
           *)
           ;;
@@ -64,7 +80,7 @@ function download_file {
       done
     ;;
     *)
-      wget --progress=bar --show-progress -q -P downloads $1
+      download_via_wget $1 $2 $3
     ;;
   esac
 }
@@ -196,6 +212,8 @@ function download_whole_fourteen {
 #
 # Descarga el archivo de un año concreto.
 #
+# $1: Año que se va a descargar
+#
 function download_year {
   echo -e "${C_ANSWER}Descargando ${C_CYAN}$1${C_RESET}"
   case $1 in
@@ -209,31 +227,49 @@ function download_year {
 #
 # Descarga una lista.
 #
+# $1: Año que se va a descargar
+#
 function download {
-  DOWNLOAD=1
-  while [[ $DOWNLOAD =~ [^SsNn] ]]; do
-    echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$1${C_RESET}? (S/n)"
-    read -s -n 1 DOWNLOAD
-    case $DOWNLOAD in
-      S|s)
-        download_year $1
-      ;;
-    esac
-  done
+  if [[ $CHOOSE_YEARS =~ [Ss] ]]; then
+    DOWNLOAD=1
+    while [[ $DOWNLOAD =~ [^SsNn] ]]; do
+      echo -e "${C_ANSWER}¿Quieres descargar ${C_CYAN}$1${C_RESET}? (S/n)"
+      read -s -n 1 DOWNLOAD
+      case $DOWNLOAD in
+        S|s)
+          download_year $1
+        ;;
+      esac
+    done
+  else
+    download_year $1
+  fi
 }
 
 #
 # Pregunta si los meses deben preguntarse de forma individual.
 #
 function months {
-  CHOOSE_EACH=1
-  while [[ $CHOOSE_EACH =~ [^SsNn] ]]; do
-    echo -e "${C_ANSWER}¿Quieres seleccionar cada mes de forma individual? (S/n)"
-    read -s -n 1 CHOOSE_EACH
+  CHOOSE_MONTH=1
+  while [[ $CHOOSE_MONTH =~ [^SsNn] ]]; do
+    echo -e "${C_ANSWER}¿Quieres seleccionar cada ${C_CYAN}mes${C_RESET} de forma individual? (S/n)"
+    read -s -n 1 CHOOSE_MONTH
+  done
+}
+
+#
+# Pregunta si quieres descargar los años por separado.
+#
+function years {
+  CHOOSE_YEARS=1
+  while [[ $CHOOSE_YEARS =~ [^SsNn] ]]; do
+    echo -e "${C_ANSWER}¿Quieres seleccionar cada ${C_CYAN}año${C_RESET} de forma individual? (S/n)"
+    read -s -n 1 CHOOSE_YEARS
   done
 }
 
 title
+years
 months
 download "2013"
 download "2014"
