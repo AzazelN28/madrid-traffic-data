@@ -7,6 +7,11 @@ case $1 in
   build)
     docker build . --tag madrid-traffic-data
   ;;
+  publish)
+    docker build . --tag madrid-traffic-data:latest
+    docker login
+    docker push azazeln28/madrid-traffic-data
+  ;;
   start)
     if [[ ! -d $(pwd)/db ]]; then
       mkdir -p db

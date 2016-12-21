@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "./csv2json > pmed.json"
+  },
   "dependencies": {
     "iconv-lite": "^0.4.15"
   }

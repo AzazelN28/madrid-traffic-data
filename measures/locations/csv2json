@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Este archivo convierte pmed.csv en un JSON
  * más legible y con más sentido.
@@ -10,6 +11,14 @@ function insert(str, pos, chr) {
   return str.slice(0, pos) + chr + str.slice(pos);
 }
 
+function getZone(zone) {
+  switch(zone) {
+    case "PUNTOS DE MEDIDA M-30": return "m30";
+    case "PUNTOS DE MEDIDA URBANOS": return "city";
+    default: return zone;
+  }
+}
+
 console.log(
   JSON.stringify(
     iconv.decode(fs.readFileSync("pmed.csv"), "iso-8859-1")
@@ -20,22 +29,19 @@ console.log(
         const [idelem,tipo_elem,identif,nombre,st_x,st_y] = row;
         const x = parseFloat(insert(st_x.replace(/\./g,""), 6, "."));
         const y = parseFloat(insert(st_y.replace(/\./g,""), 7, "."));
-        const command = `cs2cs -f '%.10f' +init=epsg:3042 +to +init=epsg:4326 << EOF\n${x} ${y} 0.0\n`;
+        const command = `cs2cs -f '%.16f' +nadgrids=@PENR2009.gsb +init=epsg:23030 +to +init=epsg:4326 << EOF\n${x} ${y}\n`;
         const output = cp.execSync(command, { encoding: "utf-8" });
-        const [fullMatch, lat, lng] = output.match(/(-?[0-9]+(?:\.[0-9]+)?)\s(-?[0-9]+(?:\.[0-9]+)?)\s(-?[0-9]+(?:\.[0-9]+)?)/);
+        const [fullMatch, lng, lat] = output.match(/(-?[0-9]+(?:\.[0-9]+)?)\s(-?[0-9]+(?:\.[0-9]+)?)\s(-?[0-9]+(?:\.[0-9]+)?)/);
         return {
+          type: "Point",
+          coordinates: [
+            parseFloat(lat),
+            parseFloat(lng)
+          ],
           id: parseInt(idelem),
-          type: tipo_elem,
+          zone: getZone(tipo_elem),
           device: identif,
-          description: nombre,
-          utm: {
-            x,
-            y,
-          },
-          location: {
-            lat: parseFloat(lat),
-            lng: parseFloat(lng)
-          }
+          description: nombre
         };
       }),
     null,

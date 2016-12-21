@@ -1,0 +1,13 @@
+{
+  "name": "mongolongo",
+  "version": "1.0.0",
+  "description": "Esta herramienta permite insertar múltiples documentos a la vez en MongoDB",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mongoose": "^4.7.4"
+  }
+}

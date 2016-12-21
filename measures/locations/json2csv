@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+const fs = require("fs");
+const [,,infile] = process.argv;
+const rows = JSON.parse(fs.readFileSync(infile, {encoding:"utf-8"}));
+const [first] = rows;
+let headerline = [];
+for (let prop in first) {
+  headerline.push(prop);
+}
+console.log(headerline.join(","));
+rows.forEach((row) => {
+  const values = [];
+  for (let prop in row) {
+    if (Array.isArray(row[prop])) {
+      const array = row[prop];
+      array.forEach((r) => values.push(`"${r}"`));
+    } else {
+      values.push(`"${row[prop]}"`);
+    }
+  }
+  console.log(values.join(","));
+});
+
+

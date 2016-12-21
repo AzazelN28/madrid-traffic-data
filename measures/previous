@@ -24,6 +24,7 @@ C_TITLE_POS="\x1B[3;4H"
 C_ERASE="\x1B[2J\x1B[0;0H"
 C_ERASE_LINE="\x1B[2K"
 C_ANSWER="\x1B[8;4H\x1B[J"
+C_DOWNLOAD="\x1B[10;4H\x1B[J"
 C_RESET="\x1B[0m"
 
 #
@@ -48,7 +49,22 @@ function epilogue {
 # $3: Año
 #
 function download_via_wget {
-  OUTPUT_FILENAME="downloads/${3}_${2}.zip"
+  case $2 in
+    Enero)      OUTPUT_FILENAME="downloads/${3}_01.zip" ;;
+    Febrero)    OUTPUT_FILENAME="downloads/${3}_02.zip" ;;
+    Marzo)      OUTPUT_FILENAME="downloads/${3}_03.zip" ;;
+    Abril)      OUTPUT_FILENAME="downloads/${3}_04.zip" ;;
+    Mayo)       OUTPUT_FILENAME="downloads/${3}_05.zip" ;;
+    Junio)      OUTPUT_FILENAME="downloads/${3}_06.zip" ;;
+    Julio)      OUTPUT_FILENAME="downloads/${3}_07.zip" ;;
+    Agosto)     OUTPUT_FILENAME="downloads/${3}_08.zip" ;;
+    Septiembre) OUTPUT_FILENAME="downloads/${3}_09.zip" ;;
+    Octubre)    OUTPUT_FILENAME="downloads/${3}_10.zip" ;;
+    Noviembre)  OUTPUT_FILENAME="downloads/${3}_11.zip" ;;
+    Diciembre)  OUTPUT_FILENAME="downloads/${3}_12.zip" ;;
+    *)
+  esac
+  echo -e "${C_DOWNLOAD}"
   wget --progress=bar --show-progress -q -O $OUTPUT_FILENAME $1
 }
 
@@ -138,7 +154,7 @@ function download_fourteen {
 #
 function download_fifteen {
   # 2015 Enero
-  download_file http://datos.madrid.es/egob/catalogo/208627-17-transporte-ptomedida-historico.zip "Enero" "2015"
+  download_file http://datos.madrid.es/egob/catalogo/208627-18-transporte-ptomedida-historico.zip "Enero" "2015"
   # 2015 Febrero
   download_file http://datos.madrid.es/egob/catalogo/208627-21-transporte-ptomedida-historico.zip "Febrero" "2015"
   # 2015 Marzo
@@ -220,7 +236,7 @@ function download_year {
     2013) download_thirteen ;;
     2014) download_fourteen ;;
     2015) download_fifteen ;;
-    2016) download_fifteen ;;
+    2016) download_sixteen ;;
   esac
 }
 
@@ -269,9 +285,27 @@ function years {
 }
 
 title
-years
-months
-download "2013"
-download "2014"
-download "2015"
-download "2016"
+
+if [[ -z $1 ]]; then
+
+  years
+  months
+  download "2013"
+  download "2014"
+  download "2015"
+  download "2016"
+
+else
+
+  case $1 in
+    2013|2014|2015|2016)
+      download $1
+    ;;
+    *)
+      echo -e "El año ${C_L_RED}$1${C_RESET} no es válido"
+      exit 1
+    ;;
+  esac
+
+fi
+exit 0

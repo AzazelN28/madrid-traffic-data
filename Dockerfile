@@ -1,6 +1,6 @@
 FROM mongo:latest
 
-RUN apt-get update && apt-get install unzip
+COPY db/* /data/db/
 
 ENTRYPOINT ["/entrypoint.sh"]
 EXPOSE 27017
