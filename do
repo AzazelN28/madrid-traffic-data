@@ -5,24 +5,37 @@ case $1 in
     docker rm mongo
   ;;
   build)
-    docker build . --tag madrid-traffic-data
+    docker build . --tag azazeln28/madrid-traffic-data
   ;;
   publish)
-    docker build . --tag madrid-traffic-data:latest
+    docker build . --tag azazeln28/madrid-traffic-data:latest
     docker login
     docker push azazeln28/madrid-traffic-data
+  ;;
+  feed)
+    if [[ ! -d $(pwd)/db ]]; then
+      mkdir -p db
+    fi
+
+    docker run --name madrid-traffic-mongo -v $(pwd)/db:/data/db -v $(pwd):/data/extras -d azazeln28/madrid-traffic-data
+    if [[ $? != 0 ]]; then
+      docker stop madrid-traffic-mongo
+      docker rm madrid-traffic-mongo
+    else
+      docker exec -i -t madrid-traffic-mongo bash
+    fi
   ;;
   start)
     if [[ ! -d $(pwd)/db ]]; then
       mkdir -p db
     fi
 
-    docker run --name mongo -v $(pwd)/db:/data/db -v $(pwd):/data/extras -d madrid-traffic-data
+    docker run --name madrid-traffic-mongo -d azazeln28/madrid-traffic-data
     if [[ $? != 0 ]]; then
-      docker stop mongo
-      docker rm mongo
+      docker stop madrid-traffic-mongo
+      docker rm madrid-traffic-mongo
     else
-      docker exec -i -t mongo bash
+      docker exec -i -t madrid-traffic-mongo bash
     fi
   ;;
 esac
