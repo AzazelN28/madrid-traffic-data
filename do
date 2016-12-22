@@ -5,7 +5,7 @@ case $1 in
     docker rm mongo
   ;;
   build)
-    docker build . --tag azazeln28/madrid-traffic-data
+    docker build . --tag azazeln28/madrid-traffic-data:latest
   ;;
   publish)
     docker build . --tag azazeln28/madrid-traffic-data:latest
