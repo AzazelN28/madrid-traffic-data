@@ -40,7 +40,7 @@ console.log(
               parseFloat(lng)
             ],
           },
-          id: parseInt(idelem),
+          id: parseInt(idelem, 10),
           zone: getZone(tipo_elem),
           device: identif,
           description: nombre
