@@ -5,7 +5,7 @@ const fs = require("fs");
 const rl = require("readline");
 const argv = require("minimist")(process.argv.slice(2));
 
-if (!argv["i"] && !argv["in"]) {
+if (!argv["in"] && !argv["i"]) {
   showUsage();
 }
 
@@ -81,19 +81,37 @@ function getOutputFile(file) {
   return `${path.basename(file, ".csv")}.bin`;
 }
 
+function getMetaFile(file) {
+  return `${path.basename(file, ".csv")}.meta`;
+}
+
 const DateRegExp = /^"?([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})"?$/;
 const FloatRegExp = /^(-?[0-9]+(?:\.[0-9]+)?)$/;
 const IntegerRegExp = /^(-?[0-9]+)$/;
 const NaturalRegExp = /^([0-9]+)$/;
 
-const inputFile = argv["in"];
-const outputFile = argv["out"] || getOutputFile(argv["in"]);
+const inputFile = argv["in"] || argv["i"];
+const outputFile = argv["out"] || argv["o"] || getOutputFile(argv["in"] || argv["i"]);
 const totalLines = argv["l"] || argv["lines"] || 0;
 
 const initialDate = new Date(2013,6,1,0,0,0);
 const timeFrame = 60000; // minutos
 
 const undefinedLocations = new Set();
+const analysis = new Map();
+
+analysis.set("minIntensity", Number.MAX_VALUE);
+analysis.set("maxIntensity", Number.MIN_VALUE);
+analysis.set("minOccupancy", Number.MAX_VALUE);
+analysis.set("maxOccupancy", Number.MIN_VALUE);
+analysis.set("minLoad", Number.MAX_VALUE);
+analysis.set("maxLoad", Number.MIN_VALUE);
+analysis.set("minAvgSpeed", Number.MAX_VALUE);
+analysis.set("maxAvgSpeed", Number.MIN_VALUE);
+analysis.set("minIntPeriod", Number.MAX_VALUE);
+analysis.set("maxIntPeriod", Number.MIN_VALUE);
+analysis.set("minDate", Number.MAX_VALUE);
+analysis.set("maxDate", Number.MIN_VALUE);
 
 /**
  * Esta función lee un archivo CSV y por cada línea llama a una función
@@ -177,18 +195,33 @@ csv2bin(inputFile, outputFile, (buffer, ...columns) => {
   const location = locations.findById(id);
   if (location) {
     const [lat,lng] = location.location.coordinates;
-    buffer.writeUInt32BE(id, 0);
+    // primer vec4
+    buffer.writeFloatLE(lat, 0);
+    buffer.writeFloatLE(lng, 4);
+    buffer.writeFloatLE((date.getTime() - initialDate.getTime()) / timeFrame, 8);
+    buffer.writeUInt32LE(id, 12);
 
-    buffer.writeFloatBE(lat, 4);
-    buffer.writeFloatBE(lng, 8);
-    buffer.writeFloatBE((date.getTime() - initialDate.getTime()) / timeFrame, 12);
+    // segundo vec4
+    buffer.writeFloatLE(intensity, 16);
+    buffer.writeFloatLE(occupancy, 20);
+    buffer.writeFloatLE(load, 24);
+    buffer.writeFloatLE(averageSpeed, 28);
 
-    buffer.writeFloatBE(intensity, 16);
-    buffer.writeFloatBE(occupancy, 20);
-    buffer.writeFloatBE(load, 24);
-    buffer.writeFloatBE(averageSpeed, 28);
+    // tercer vec4
+    buffer.writeFloatLE(integrationPeriod, 32);
 
-    buffer.writeFloatBE(integrationPeriod, 32);
+    analysis.set("minIntensity", Math.min(intensity, analysis.get("minIntensity")));
+    analysis.set("maxIntensity", Math.max(intensity, analysis.get("maxIntensity")));
+    analysis.set("minOccupancy", Math.min(occupancy, analysis.get("minOccupancy")));
+    analysis.set("maxOccupancy", Math.max(occupancy, analysis.get("maxOccupancy")));
+    analysis.set("minLoad", Math.min(load, analysis.get("minLoad")));
+    analysis.set("maxLoad", Math.max(load, analysis.get("maxLoad")));
+    analysis.set("minAvgSpeed", Math.min(averageSpeed, analysis.get("minAvgSpeed")));
+    analysis.set("maxAvgSpeed", Math.max(averageSpeed, analysis.get("maxAvgSpeed")));
+    analysis.set("minIntPeriod", Math.min(integrationPeriod, analysis.get("minIntPeriod")));
+    analysis.set("maxIntPeriod", Math.max(integrationPeriod, analysis.get("maxIntPeriod")));
+    analysis.set("minDate", Math.min(date.getTime(), analysis.get("minDate")));
+    analysis.set("maxDate", Math.max(date.getTime(), analysis.get("maxDate")));
     return true;
   } else {
     undefinedLocations.add(id);
@@ -196,9 +229,16 @@ csv2bin(inputFile, outputFile, (buffer, ...columns) => {
   }
 }, () => {
   if (undefinedLocations.size > 0) {
-    process.stdout.write("\nLocalizaciones no encontradas");
+    process.stdout.write("\nLocalizaciones no encontradas\n");
     for (let undefinedLocation of undefinedLocations) {
       process.stdout.write(`${undefinedLocation}\n`);
     }
+  }
+
+  if (analysis.size > 0) {
+    analysis.forEach((value,name) => {
+      process.stdout.write(`${name}: ${value}\n`);
+    });
+    fs.writeFileSync(getMetaFile(argv["in"] || argv["i"]), JSON.stringify(analysis, null, "  "));
   }
 }, totalLines);
