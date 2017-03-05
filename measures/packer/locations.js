@@ -4,6 +4,12 @@ module.exports = {
   findById(id) {
     return locations.find((location) => location.id === id);
   },
+  findByDeviceId(device) {
+    return locations.find((location) => location.device === device);
+  },
+  list() {
+    return locations;
+  },
   getBounds() {
     const bounds = {
       max: [],

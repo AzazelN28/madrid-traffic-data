@@ -1,0 +1,2 @@
+#!/bin/bash
+for f in ../downloads/csvs/*.csv; do ./pckr --in "$f"; done

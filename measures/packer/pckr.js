@@ -1,17 +1,58 @@
-const locations = require("./locations");
+const locations = require("./locations.js");
 const chalk = require("chalk");
 const path = require("path");
 const fs = require("fs");
 const rl = require("readline");
 const argv = require("minimist")(process.argv.slice(2));
 
+const PI_180 = Math.PI / 180;
+const PI_4 = Math.PI * 4;
+
+const DateRegExp = /^"?([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})"?$/;
+const FloatRegExp = /^(-?[0-9]+(?:\.[0-9]+)?)$/;
+const IntegerRegExp = /^(-?[0-9]+)$/;
+const NaturalRegExp = /^([0-9]+)$/;
+const StringRegExp = /^"(.*?)"$/;
+
+const inputFile = argv["in"] || argv["i"];
+const outputFile = argv["out"] || argv["o"] || getOutputFile(argv["in"] || argv["i"]);
+const totalLines = argv["l"] || argv["lines"] || 0;
+
+const initialDate = new Date(2013,6,1,0,0,0);
+const timeFrame = 60000; // minutos
+
+const undefinedLocations = new Set();
+const analysis = new Map();
+
+analysis.set("minIntensity", Number.MAX_VALUE);
+analysis.set("maxIntensity", Number.MIN_VALUE);
+analysis.set("minOccupancy", Number.MAX_VALUE);
+analysis.set("maxOccupancy", Number.MIN_VALUE);
+analysis.set("minLoad", Number.MAX_VALUE);
+analysis.set("maxLoad", Number.MIN_VALUE);
+analysis.set("minAvgSpeed", Number.MAX_VALUE);
+analysis.set("maxAvgSpeed", Number.MIN_VALUE);
+analysis.set("minIntPeriod", Number.MAX_VALUE);
+analysis.set("maxIntPeriod", Number.MIN_VALUE);
+analysis.set("minDate", Number.MAX_VALUE);
+analysis.set("maxDate", Number.MIN_VALUE);
+analysis.set("linesProcessed", 0);
+analysis.set("linesOk", 0);
+analysis.set("linesWrong", 0);
+analysis.set("undefinedLocations", null);
+
 if (!argv["in"] && !argv["i"]) {
   showUsage();
 }
 
-const PI_180 = Math.PI / 180;
-const PI_4 = Math.PI * 4;
-
+/**
+ * Convierte la latitud y la longitud en coordenadas X e Y.
+ *
+ * @param {Array} out
+ * @param {number} latitude
+ * @param {number} longitude
+ * @return {Array}
+ */
 function latLongToXY(out, lat, lng) {
   const sin = Math.sin(lat * PI_180);
   const y = (0.5 - Math.log((1 + sin) / (1 - sin)) / (PI_4)) * 256;
@@ -21,6 +62,12 @@ function latLongToXY(out, lat, lng) {
   return out;
 }
 
+/**
+ * Convierte la longitud en la coordenada X.
+ *
+ * @param {number} value
+ * @return {number}
+ */
 function longitudeToX(value) {
   if (lng > 180) {
     return 256 * (lng / 360 - 0.5);
@@ -28,10 +75,19 @@ function longitudeToX(value) {
   return 256 * (lng / 360 + 0.5);
 }
 
+/**
+ * Convierte la latitud en la coordenada Y.
+ *
+ * @param {number} value
+ * @return {number}
+ */
 function latitudeToY(value) {
   return 128 * (1 - Math.log(Math.tan((0.25 + value / 360) * Math.PI)) / Math.PI);
 }
 
+/**
+ * Muestra las opciones del packer.
+ */
 function showUsage() {
   process.stdout.write(`
 Uso: ${path.basename(process.argv[1])} -i <csv> -o <bin> -l <lines> -r
@@ -68,6 +124,52 @@ function showStats(stats) {
 }
 
 /**
+ * Devuelve si es la versión uno.
+ */
+function isVersion1(numFields) {
+  return numFields === 9;
+}
+
+/**
+ * Devuelve si es la versión uno.
+ */
+function isVersion2(numFields) {
+  return numFields === 10;
+}
+
+/**
+ * Devuelve si es la versión dos.
+ */
+function isVersion3(numFields) {
+  return numFields === 11;
+}
+
+/**
+ * Esta función normaliza todos los datos de los csvs para poder generar
+ * un gran archivo binario con los datos de madrid.
+ */
+function normalize(fields) {
+  if (isVersion1(fields.length)) {
+    const [id,date,intensity,occupancy,load,type,avgSpeed,error,intPeriod] = fields;
+    const current = locations.findByDeviceId(id);
+    const coordinates = (current && current.location && current.location.coordinates) || null;
+    return [coordinates,"",date,id,"",type,intensity,occupancy,load,avgSpeed,intPeriod,error];
+  } else if (isVersion2(fields.length)) {
+    const [eid,date,id,etype,intensity,occupancy,load,avgSpeed,error,intPeriod] = fields;
+    const current = locations.findByDeviceId(id) || locations.findById(eid);
+    const coordinates = (current && current.location && current.location.coordinates) || null;
+    return [coordinates,eid,date,id,etype,"",intensity,occupancy,load,avgSpeed,intPeriod,error];
+  } else if (isVersion3(fields.length)) {
+    const [eid,date,id,etype,type,intensity,occupancy,load,avgSpeed,error,intPeriod] = fields;
+    const current = locations.findByDeviceId(id) || locations.findById(eid);
+    const coordinates = (current && current.location && current.location.coordinates) || null;
+    return [coordinates,eid,date,id,etype,type,intensity,occupancy,load,avgSpeed,intPeriod,error];
+  } else {
+    return [];
+  }
+}
+
+/**
  * Cuando el proceso termina volvemos a mostrar el cursor.
  */
 process.on("exit", () => {
@@ -76,42 +178,23 @@ process.on("exit", () => {
 
 /**
  * Obtiene el nombre por defecto de la consola.
+ *
+ * @param {string} file
+ * @return {string}
  */
 function getOutputFile(file) {
   return `${path.basename(file, ".csv")}.bin`;
 }
 
+/**
+ * Obtiene el nombre por defecto del meta file.
+ *
+ * @param {string} file
+ * @return {string}
+ */
 function getMetaFile(file) {
   return `${path.basename(file, ".csv")}.meta`;
 }
-
-const DateRegExp = /^"?([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})"?$/;
-const FloatRegExp = /^(-?[0-9]+(?:\.[0-9]+)?)$/;
-const IntegerRegExp = /^(-?[0-9]+)$/;
-const NaturalRegExp = /^([0-9]+)$/;
-
-const inputFile = argv["in"] || argv["i"];
-const outputFile = argv["out"] || argv["o"] || getOutputFile(argv["in"] || argv["i"]);
-const totalLines = argv["l"] || argv["lines"] || 0;
-
-const initialDate = new Date(2013,6,1,0,0,0);
-const timeFrame = 60000; // minutos
-
-const undefinedLocations = new Set();
-const analysis = new Map();
-
-analysis.set("minIntensity", Number.MAX_VALUE);
-analysis.set("maxIntensity", Number.MIN_VALUE);
-analysis.set("minOccupancy", Number.MAX_VALUE);
-analysis.set("maxOccupancy", Number.MIN_VALUE);
-analysis.set("minLoad", Number.MAX_VALUE);
-analysis.set("maxLoad", Number.MIN_VALUE);
-analysis.set("minAvgSpeed", Number.MAX_VALUE);
-analysis.set("maxAvgSpeed", Number.MIN_VALUE);
-analysis.set("minIntPeriod", Number.MAX_VALUE);
-analysis.set("maxIntPeriod", Number.MIN_VALUE);
-analysis.set("minDate", Number.MAX_VALUE);
-analysis.set("maxDate", Number.MIN_VALUE);
 
 /**
  * Esta función lee un archivo CSV y por cada línea llama a una función
@@ -127,7 +210,8 @@ function csv(fileName, progress, complete, totalLines = 0) {
       reader.close();
     } else {
       lines++;
-      progress(line.split(";").map((column) => {
+      const fields = line.split(";");
+      const mappedFields = fields.map((column) => {
         if (FloatRegExp.test(column)) {
           return parseFloat(column);
         } else if (DateRegExp.test(column)) {
@@ -140,9 +224,12 @@ function csv(fileName, progress, complete, totalLines = 0) {
             parseInt(minutes, 10),
             parseInt(seconds, 10)
           );
+        } else if (StringRegExp.test(column)) {
+          return column.replace(/^("|')(.*?)\1$/,"$2");
         }
         return column;
-      }));
+      });
+      progress(mappedFields);
     }
   });
   reader.on("close", () => {
@@ -174,14 +261,18 @@ function csv2bin(csvfile, binfile, transform, complete, totalLines = 0) {
       const result = transform(buffer, ...columns);
       if (result) {
         stats.ok++;
+        stream.write(buffer);
       } else {
         stats.wrong++;
       }
-      stream.write(buffer);
     }
     stats.lines++;
     showStats(stats);
   }, () => {
+    analysis.set("linesProcessed", stats.lines);
+    analysis.set("linesOk", stats.ok);
+    analysis.set("linesWrong", stats.wrong);
+    analysis.set("undefinedLocations", undefinedLocations);
     stream.end();
     complete();
   }, totalLines);
@@ -191,10 +282,13 @@ function csv2bin(csvfile, binfile, transform, complete, totalLines = 0) {
  * Realizamos la conversión.
  */
 csv2bin(inputFile, outputFile, (buffer, ...columns) => {
-  const [id,date,deviceId,deviceType,intensity,occupancy,load,averageSpeed,error,integrationPeriod] = columns;
-  const location = locations.findById(id);
-  if (location) {
-    const [lat,lng] = location.location.coordinates;
+  const normalizedColumns = normalize(columns);
+  if (normalizedColumns.length === 0) {
+    return false;
+  }
+  const [coordinates,eid,date,id,etype,type,intensity,occupancy,load,averageSpeed,integrationPeriod,error] = normalizedColumns;
+  if (coordinates) {
+    const [lat,lng] = coordinates;
     // primer vec4
     buffer.writeFloatLE(lat, 0);
     buffer.writeFloatLE(lng, 4);
@@ -236,9 +330,17 @@ csv2bin(inputFile, outputFile, (buffer, ...columns) => {
   }
 
   if (analysis.size > 0) {
+    const serializable = {};
     analysis.forEach((value,name) => {
+      if (value instanceof Set) {
+        const list = [];
+        value.forEach((value) => list.push(value));
+        serializable[name] = list;
+      } else {
+        serializable[name] = value;
+      }
       process.stdout.write(`${name}: ${value}\n`);
     });
-    fs.writeFileSync(getMetaFile(argv["in"] || argv["i"]), JSON.stringify(analysis, null, "  "));
+    fs.writeFileSync(getMetaFile(argv["in"] || argv["i"]), JSON.stringify(serializable, null, "  "));
   }
 }, totalLines);
