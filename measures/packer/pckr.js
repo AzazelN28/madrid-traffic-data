@@ -153,17 +153,20 @@ function normalize(fields) {
     const [id,date,intensity,occupancy,load,type,avgSpeed,error,intPeriod] = fields;
     const current = locations.findByDeviceId(id);
     const coordinates = (current && current.location && current.location.coordinates) || null;
-    return [coordinates,"",date,id,"",type,intensity,occupancy,load,avgSpeed,intPeriod,error];
+    const color = (current && current.color) || null;
+    return [coordinates,color,"",date,id,"",type,intensity,occupancy,load,avgSpeed,intPeriod,error];
   } else if (isVersion2(fields.length)) {
     const [eid,date,id,etype,intensity,occupancy,load,avgSpeed,error,intPeriod] = fields;
     const current = locations.findByDeviceId(id) || locations.findById(eid);
     const coordinates = (current && current.location && current.location.coordinates) || null;
-    return [coordinates,eid,date,id,etype,"",intensity,occupancy,load,avgSpeed,intPeriod,error];
+    const color = (current && current.color) || null;
+    return [coordinates,color,eid,date,id,etype,"",intensity,occupancy,load,avgSpeed,intPeriod,error];
   } else if (isVersion3(fields.length)) {
     const [eid,date,id,etype,type,intensity,occupancy,load,avgSpeed,error,intPeriod] = fields;
     const current = locations.findByDeviceId(id) || locations.findById(eid);
     const coordinates = (current && current.location && current.location.coordinates) || null;
-    return [coordinates,eid,date,id,etype,type,intensity,occupancy,load,avgSpeed,intPeriod,error];
+    const color = (current && current.color) || null;
+    return [coordinates,color,eid,date,id,etype,type,intensity,occupancy,load,avgSpeed,intPeriod,error];
   } else {
     return [];
   }
@@ -286,7 +289,7 @@ csv2bin(inputFile, outputFile, (buffer, ...columns) => {
   if (normalizedColumns.length === 0) {
     return false;
   }
-  const [coordinates,eid,date,id,etype,type,intensity,occupancy,load,averageSpeed,integrationPeriod,error] = normalizedColumns;
+  const [coordinates,color,eid,date,id,etype,type,intensity,occupancy,load,averageSpeed,integrationPeriod,error] = normalizedColumns;
   if (coordinates) {
     const [lat,lng] = coordinates;
     // primer vec4
@@ -296,13 +299,14 @@ csv2bin(inputFile, outputFile, (buffer, ...columns) => {
     buffer.writeUInt32LE(id, 12);
 
     // segundo vec4
-    buffer.writeFloatLE(intensity, 16);
+    buffer.writeFloatLE(color, 16);
     buffer.writeFloatLE(occupancy, 20);
     buffer.writeFloatLE(load, 24);
-    buffer.writeFloatLE(averageSpeed, 28);
+    buffer.writeFloatLE(intensity, 28);
 
     // tercer vec4
-    buffer.writeFloatLE(integrationPeriod, 32);
+    buffer.writeFloatLE(averageSpeed, 32);
+    buffer.writeFloatLE(integrationPeriod, 36);
 
     analysis.set("minIntensity", Math.min(intensity, analysis.get("minIntensity")));
     analysis.set("maxIntensity", Math.max(intensity, analysis.get("maxIntensity")));
